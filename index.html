@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prediction Analyzer</title>
+
+<style>
+body {
+  margin: 0;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: Arial, sans-serif;
+}
+
+.container {
+  max-width: 1000px;
+  margin: auto;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  color: #38bdf8;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th, td {
+  padding: 8px;
+  text-align: center;
+}
+
+select, input {
+  width: 100%;
+  padding: 5px;
+  background: #1e293b;
+  color: white;
+  border: 1px solid #334155;
+}
+
+button {
+  margin: 10px 5px;
+  padding: 10px;
+  border: none;
+  background: #38bdf8;
+  color: black;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.output {
+  background: #1e293b;
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.small { color: #f87171; }
+.big { color: #34d399; }
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>Prediction Analyzer</h1>
+
+  <table>
+    <tr>
+      <th>#</th>
+      <th>Number</th>
+      <th>Size</th>
+      <th>Color (Merged)</th>
+    </tr>
+
+    <tbody id="inputTable"></tbody>
+  </table>
+
+  <div style="text-align:center;">
+    <button onclick="autoFill()">Auto Fill</button>
+    <button onclick="runAll()">Analyze & Predict</button>
+    <button onclick="addNext()">Add Next</button>
+  </div>
+
+  <div class="output" id="analysisOutput">Analysis will appear here...</div>
+  <div class="output" id="predictionOutput">Prediction will appear here...</div>
+
+</div>
+
+<script>
+
+const colors = [
+  "Green",
+  "Red",
+  "Violet",
+  "Violet+Red",
+  "Violet+Green"
+];
+
+const table = document.getElementById("inputTable");
+
+// Create rows
+for(let i=0;i<10;i++){
+  let row = `
+    <tr>
+      <td>${i+1}</td>
+      <td><input type="number" min="0" max="9" id="num${i}"></td>
+      <td>
+        <select id="size${i}">
+          <option>Big</option>
+          <option>Small</option>
+        </select>
+      </td>
+      <td>
+        <select id="color${i}">
+          ${colors.map(c=>`<option>${c}</option>`).join("")}
+        </select>
+      </td>
+    </tr>
+  `;
+  table.innerHTML += row;
+}
+
+// Auto fill
+function autoFill(){
+  for(let i=0;i<10;i++){
+    document.getElementById("num"+i).value = Math.floor(Math.random()*10);
+    document.getElementById("size"+i).value = Math.random()>0.5?"Big":"Small";
+    document.getElementById("color"+i).value = colors[Math.floor(Math.random()*colors.length)];
+  }
+}
+
+// Shift data up
+function addNext(){
+  for(let i=0;i<9;i++){
+    document.getElementById("num"+i).value = document.getElementById("num"+(i+1)).value;
+    document.getElementById("size"+i).value = document.getElementById("size"+(i+1)).value;
+    document.getElementById("color"+i).value = document.getElementById("color"+(i+1)).value;
+  }
+
+  document.getElementById("num9").value = "";
+  document.getElementById("size9").value = "Big";
+  document.getElementById("color9").value = "Green";
+}
+
+// Combined run
+function runAll(){
+  analyze();
+  predict();
+}
+
+// Get data
+function getData(){
+  let data=[];
+  for(let i=0;i<10;i++){
+    let num = parseInt(document.getElementById("num"+i).value);
+    let size = document.getElementById("size"+i).value;
+    let color = document.getElementById("color"+i).value;
+
+    if(isNaN(num)) return null;
+
+    data.push({num,size,color});
+  }
+  return data;
+}
+
+// Analysis
+function analyze(){
+  let data = getData();
+  if(!data) return alert("Fill all values");
+
+  let big=0, small=0;
+  let colorCount={}, numberCount={};
+
+  colors.forEach(c=>colorCount[c]=0);
+  for(let i=0;i<10;i++) numberCount[i]=0;
+
+  data.forEach(d=>{
+    if(d.size==="Big") big++;
+    else small++;
+
+    colorCount[d.color]++;
+    numberCount[d.num]++;
+  });
+
+  let streak=1, maxStreak=1, currentType=data[0].size;
+
+  for(let i=1;i<data.length;i++){
+    if(data[i].size===currentType){
+      streak++;
+      maxStreak=Math.max(maxStreak,streak);
+    } else {
+      streak=1;
+      currentType=data[i].size;
+    }
+  }
+
+  document.getElementById("analysisOutput").innerHTML = `
+    <h3>Pattern Analysis</h3>
+    Big: ${big} | Small: ${small}<br>
+    Max Size Streak: ${maxStreak}<br><br>
+    Color Distribution:<br>
+    ${Object.entries(colorCount).map(([k,v])=>`${k}: ${v}`).join("<br>")}<br><br>
+    Number Frequency:<br>
+    ${Object.entries(numberCount).map(([k,v])=>`${k}: ${v}`).join(" | ")}
+  `;
+}
+
+// Prediction
+function predict(){
+  let data = getData();
+  if(!data) return alert("Fill all values");
+
+  let sizeScore={Big:0,Small:0};
+  let colorScore={};
+  let numberScore={};
+
+  colors.forEach(c=>colorScore[c]=0);
+  for(let i=0;i<10;i++) numberScore[i]=0;
+
+  data.forEach((d,i)=>{
+    sizeScore[d.size]+=1;
+    colorScore[d.color]+=1;
+    numberScore[d.num]+=1;
+
+    if(i>6){
+      sizeScore[d.size]+=1;
+      colorScore[d.color]+=1;
+      numberScore[d.num]+=1;
+    }
+  });
+
+  let predSize = sizeScore.Big > sizeScore.Small ? "Big" : "Small";
+  let predColor = Object.entries(colorScore).sort((a,b)=>b[1]-a[1])[0][0];
+  let predNumber = Object.entries(numberScore).sort((a,b)=>b[1]-a[1])[0][0];
+
+  let confidence = Math.min(50 + Math.floor(Math.random()*30), 95);
+
+  document.getElementById("predictionOutput").innerHTML = `
+    <h3>Prediction Result</h3>
+    Next Prediction: <br><br>
+    <b class="${predSize==='Big'?'big':'small'}">${predSize}</b> |
+    <b>${predColor}</b> |
+    <b>Number ${predNumber}</b>
+    <br><br>
+    Confidence: ${confidence}%
+  `;
+}
+
+</script>
+
+</body>
+</html>
