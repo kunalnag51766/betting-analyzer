@@ -3,257 +3,245 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prediction Analyzer</title>
+<title>AI Predictor</title>
 
 <style>
-body {
-  margin: 0;
-  background: #0f172a;
-  color: #e2e8f0;
-  font-family: Arial, sans-serif;
+body { margin:0; background:#0f172a; color:#e2e8f0; font-family:Arial;}
+.container{max-width:1000px;margin:auto;padding:20px;}
+h1{text-align:center;color:#38bdf8;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th,td{padding:8px;text-align:center;}
+input,select{
+  width:100%;padding:5px;background:#1e293b;color:white;border:1px solid #334155;
 }
-
-.container {
-  max-width: 1000px;
-  margin: auto;
-  padding: 20px;
+button{
+  margin:10px 5px;padding:10px;border:none;background:#38bdf8;color:black;font-weight:bold;cursor:pointer;
 }
-
-h1 {
-  text-align: center;
-  color: #38bdf8;
+.output{background:#1e293b;margin-top:20px;padding:15px;border-radius:8px;}
+.big{color:#34d399;} .small{color:#f87171;}
+.grid{
+  display:grid;
+  grid-template-columns: repeat(5,1fr);
+  gap:6px;
+  margin-top:10px;
 }
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
+.cell{
+  background:#020617;
+  padding:6px;
+  border-radius:4px;
+  font-size:12px;
 }
-
-th, td {
-  padding: 8px;
-  text-align: center;
-}
-
-select, input {
-  width: 100%;
-  padding: 5px;
-  background: #1e293b;
-  color: white;
-  border: 1px solid #334155;
-}
-
-button {
-  margin: 10px 5px;
-  padding: 10px;
-  border: none;
-  background: #38bdf8;
-  color: black;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.output {
-  background: #1e293b;
-  margin-top: 20px;
-  padding: 15px;
-  border-radius: 8px;
-}
-
-.small { color: #f87171; }
-.big { color: #34d399; }
-
 </style>
 </head>
 
 <body>
-
 <div class="container">
-  <h1>Prediction Analyzer</h1>
+<h1>AI Predictor Pro</h1>
 
-  <table>
-    <tr>
-      <th>#</th>
-      <th>Number</th>
-      <th>Size</th>
-      <th>Color (Merged)</th>
-    </tr>
+<table>
+<tr><th>#</th><th>Number</th><th>Size</th><th>Color</th></tr>
+<tbody id="table"></tbody>
+</table>
 
-    <tbody id="inputTable"></tbody>
-  </table>
+<div style="text-align:center;">
+<button onclick="autoFill()">Auto Fill</button>
+<button onclick="runAll()">Analyze & Predict</button>
+<button onclick="addNext()">Add Next</button>
+<button onclick="resetHistory()">Reset AI</button>
+</div>
 
-  <div style="text-align:center;">
-    <button onclick="autoFill()">Auto Fill</button>
-    <button onclick="runAll()">Analyze & Predict</button>
-    <button onclick="addNext()">Add Next</button>
-  </div>
-
-  <div class="output" id="analysisOutput">Analysis will appear here...</div>
-  <div class="output" id="predictionOutput">Prediction will appear here...</div>
+<div class="output" id="analysis"></div>
+<div class="output" id="prediction"></div>
+<div class="output" id="dashboard"></div>
 
 </div>
 
 <script>
 
-const colors = [
-  "Green",
-  "Red",
-  "Violet",
-  "Violet+Red",
-  "Violet+Green"
-];
+const colors=["Green","Red","Violet","Violet+Red","Violet+Green"];
+const table=document.getElementById("table");
 
-const table = document.getElementById("inputTable");
-
-// Create rows
+// build table
 for(let i=0;i<10;i++){
-  let row = `
-    <tr>
-      <td>${i+1}</td>
-      <td><input type="number" min="0" max="9" id="num${i}"></td>
-      <td>
-        <select id="size${i}">
-          <option>Big</option>
-          <option>Small</option>
-        </select>
-      </td>
-      <td>
-        <select id="color${i}">
-          ${colors.map(c=>`<option>${c}</option>`).join("")}
-        </select>
-      </td>
-    </tr>
-  `;
-  table.innerHTML += row;
+table.innerHTML+=`
+<tr>
+<td>${i+1}</td>
+<td><input type="number" id="n${i}" min="0" max="9"></td>
+<td><select id="s${i}"><option>Big</option><option>Small</option></select></td>
+<td><select id="c${i}">${colors.map(c=>`<option>${c}</option>`).join("")}</select></td>
+</tr>`;
 }
 
-// Auto fill
+function n(i){return document.getElementById("n"+i);}
+function s(i){return document.getElementById("s"+i);}
+function c(i){return document.getElementById("c"+i);}
+
+// storage
+function getHistory(){ return JSON.parse(localStorage.getItem("history")||"[]"); }
+function saveHistory(h){ localStorage.setItem("history",JSON.stringify(h)); }
+function getStats(){
+  return JSON.parse(localStorage.getItem("stats")||`{"total":0,"correct":0,"size":0,"color":0,"number":0}`);
+}
+function saveStats(s){ localStorage.setItem("stats",JSON.stringify(s)); }
+
+// autofill
 function autoFill(){
-  for(let i=0;i<10;i++){
-    document.getElementById("num"+i).value = Math.floor(Math.random()*10);
-    document.getElementById("size"+i).value = Math.random()>0.5?"Big":"Small";
-    document.getElementById("color"+i).value = colors[Math.floor(Math.random()*colors.length)];
-  }
+for(let i=0;i<10;i++){
+n(i).value=Math.floor(Math.random()*10);
+s(i).value=Math.random()>0.5?"Big":"Small";
+c(i).value=colors[Math.floor(Math.random()*colors.length)];
+}
 }
 
-// Shift data up
-function addNext(){
-  for(let i=0;i<9;i++){
-    document.getElementById("num"+i).value = document.getElementById("num"+(i+1)).value;
-    document.getElementById("size"+i).value = document.getElementById("size"+(i+1)).value;
-    document.getElementById("color"+i).value = document.getElementById("color"+(i+1)).value;
-  }
-
-  document.getElementById("num9").value = "";
-  document.getElementById("size9").value = "Big";
-  document.getElementById("color9").value = "Green";
-}
-
-// Combined run
-function runAll(){
-  analyze();
-  predict();
-}
-
-// Get data
+// get data
 function getData(){
-  let data=[];
-  for(let i=0;i<10;i++){
-    let num = parseInt(document.getElementById("num"+i).value);
-    let size = document.getElementById("size"+i).value;
-    let color = document.getElementById("color"+i).value;
-
-    if(isNaN(num)) return null;
-
-    data.push({num,size,color});
-  }
-  return data;
+let d=[];
+for(let i=0;i<10;i++){
+let num=parseInt(n(i).value);
+if(isNaN(num)) return null;
+d.push({num,size:s(i).value,color:c(i).value});
+}
+return d;
 }
 
-// Analysis
-function analyze(){
-  let data = getData();
-  if(!data) return alert("Fill all values");
-
-  let big=0, small=0;
-  let colorCount={}, numberCount={};
-
-  colors.forEach(c=>colorCount[c]=0);
-  for(let i=0;i<10;i++) numberCount[i]=0;
-
-  data.forEach(d=>{
-    if(d.size==="Big") big++;
-    else small++;
-
-    colorCount[d.color]++;
-    numberCount[d.num]++;
-  });
-
-  let streak=1, maxStreak=1, currentType=data[0].size;
-
-  for(let i=1;i<data.length;i++){
-    if(data[i].size===currentType){
-      streak++;
-      maxStreak=Math.max(maxStreak,streak);
-    } else {
-      streak=1;
-      currentType=data[i].size;
-    }
-  }
-
-  document.getElementById("analysisOutput").innerHTML = `
-    <h3>Pattern Analysis</h3>
-    Big: ${big} | Small: ${small}<br>
-    Max Size Streak: ${maxStreak}<br><br>
-    Color Distribution:<br>
-    ${Object.entries(colorCount).map(([k,v])=>`${k}: ${v}`).join("<br>")}<br><br>
-    Number Frequency:<br>
-    ${Object.entries(numberCount).map(([k,v])=>`${k}: ${v}`).join(" | ")}
-  `;
+// normalize
+function norm(obj){
+let sum=Object.values(obj).reduce((a,b)=>a+b,0);
+let r={};
+for(let k in obj) r[k]=sum?obj[k]/sum:0;
+return r;
 }
 
-// Prediction
-function predict(){
-  let data = getData();
-  if(!data) return alert("Fill all values");
+// MAIN
+function runAll(){
+let data=getData();
+if(!data) return alert("Fill all");
 
-  let sizeScore={Big:0,Small:0};
-  let colorScore={};
-  let numberScore={};
+let history=getHistory();
+let full=[...history.slice(-50),...data];
 
-  colors.forEach(c=>colorScore[c]=0);
-  for(let i=0;i<10;i++) numberScore[i]=0;
+// scoring
+let numS={}, sizeS={Big:0,Small:0}, colorS={};
+colors.forEach(c=>colorS[c]=0);
+for(let i=0;i<10;i++) numS[i]=0;
 
-  data.forEach((d,i)=>{
-    sizeScore[d.size]+=1;
-    colorScore[d.color]+=1;
-    numberScore[d.num]+=1;
+// build
+full.forEach((d,i)=>{
+let w=1+(i/full.length);
+numS[d.num]+=w;
+sizeS[d.size]+=w;
+colorS[d.color]+=w;
+});
 
-    if(i>6){
-      sizeScore[d.size]+=1;
-      colorScore[d.color]+=1;
-      numberScore[d.num]+=1;
-    }
-  });
+// probabilities
+let numP=norm(numS);
+let sizeP=norm(sizeS);
+let colorP=norm(colorS);
 
-  let predSize = sizeScore.Big > sizeScore.Small ? "Big" : "Small";
-  let predColor = Object.entries(colorScore).sort((a,b)=>b[1]-a[1])[0][0];
-  let predNumber = Object.entries(numberScore).sort((a,b)=>b[1]-a[1])[0][0];
+// pick max
+let pick=o=>Object.entries(o).sort((a,b)=>b[1]-a[1])[0];
+let [pn,np]=pick(numP);
+let [ps,sp]=pick(sizeP);
+let [pc,cp]=pick(colorP);
 
-  let confidence = Math.min(50 + Math.floor(Math.random()*30), 95);
+let confidence=Math.round(((np+sp+cp)/3)*100);
 
-  document.getElementById("predictionOutput").innerHTML = `
-    <h3>Prediction Result</h3>
-    Next Prediction: <br><br>
-    <b class="${predSize==='Big'?'big':'small'}">${predSize}</b> |
-    <b>${predColor}</b> |
-    <b>Number ${predNumber}</b>
-    <br><br>
-    Confidence: ${confidence}%
-  `;
+// save prediction
+localStorage.setItem("lastPrediction",JSON.stringify({num:pn,size:ps,color:pc}));
+
+// 🔥 NUMBER DISTRIBUTION UI
+let freqHTML="";
+for(let i=0;i<10;i++){
+freqHTML+=`
+<div class="cell">
+${i}<br>
+${numS[i].toFixed(1)}<br>
+${(numP[i]*100).toFixed(1)}%
+</div>`;
 }
+
+document.getElementById("analysis").innerHTML=`
+<h3>Analysis</h3>
+Big ${(sizeP.Big*100).toFixed(1)}% | Small ${(sizeP.Small*100).toFixed(1)}%
+
+<h4>Number Distribution</h4>
+<div class="grid">${freqHTML}</div>
+<small>(Top = Number, Middle = Weighted Frequency, Bottom = Probability)</small>
+`;
+
+document.getElementById("prediction").innerHTML=`
+<h3>Prediction</h3>
+<b class="${ps==='Big'?'big':'small'}">${ps}</b> | ${pc} | Number ${pn}
+<br><br>Confidence: ${confidence}%
+`;
+
+updateDashboard();
+}
+
+// learning
+function addNext(){
+let data=getData();
+let lastReal=data[9];
+
+let pred=JSON.parse(localStorage.getItem("lastPrediction")||"null");
+let stats=getStats();
+
+if(pred){
+stats.total++;
+
+if(pred.num==lastReal.num) stats.number++;
+if(pred.size==lastReal.size) stats.size++;
+if(pred.color==lastReal.color) stats.color++;
+
+if(pred.num==lastReal.num && pred.size==lastReal.size && pred.color==lastReal.color){
+stats.correct++;
+}
+saveStats(stats);
+}
+
+// save history
+let history=getHistory();
+history.push(lastReal);
+saveHistory(history);
+
+// shift
+for(let i=0;i<9;i++){
+n(i).value=n(i+1).value;
+s(i).value=s(i+1).value;
+c(i).value=c(i+1).value;
+}
+n(9).value="";
+s(9).value="Big";
+c(9).value="Green";
+
+updateDashboard();
+}
+
+// dashboard
+function updateDashboard(){
+let s=getStats();
+let acc=s.total?((s.correct/s.total)*100).toFixed(1):0;
+
+document.getElementById("dashboard").innerHTML=`
+<h3>Accuracy Dashboard</h3>
+Total: ${s.total}<br>
+Full Correct: ${s.correct}<br>
+Number: ${s.number}<br>
+Size: ${s.size}<br>
+Color: ${s.color}<br>
+Overall Accuracy: ${acc}%
+`;
+}
+
+// reset
+function resetHistory(){
+localStorage.clear();
+alert("AI Reset Done");
+updateDashboard();
+}
+
+updateDashboard();
 
 </script>
-
 </body>
 </html>
